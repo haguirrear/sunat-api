@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,16 +23,7 @@ type AuthResponseBody struct {
 	AccessToken string `json:"access_token"`
 }
 
-const defaultTimeout = time.Second
-
-// body = {
-//     "scope": "https://api-cpe.sunat.gob.pe",
-//     "grant_type": "password",
-//     "client_id": self.client_id,
-//     "client_secret": self.client_secret,
-//     "username": self.username,
-//     "password": self.password,
-// }
+const defaultTimeout = 10 * time.Second
 
 func GetToken(baseURL string, params AuthParams) (token string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
@@ -47,14 +39,15 @@ func GetToken(baseURL string, params AuthParams) (token string, err error) {
 	form.Set("password", params.Password)
 
 	encoded := strings.NewReader(form.Encode())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, authURL, encoded)
+	log.Printf("Body: %s\n", form.Encode())
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, authURL, encoded)
 	if err != nil {
 		return "", fmt.Errorf("error building auth request: %w", err)
 	}
 
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := client.Do(request)
 	if err != nil {
 		return "", fmt.Errorf("error in auth response: %w", err)
 	}

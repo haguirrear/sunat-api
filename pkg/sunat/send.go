@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,17 +21,20 @@ var ErrorFileNotFound = errors.New("File not found")
 
 func ZipAndSendReceipt(baseURL, authToken, receiptPath string, receiptFile io.Reader) (numTicket string, err error) {
 	zipFile, err := createSingleFileZip(receiptPath, receiptFile)
-
 	if err != nil {
 		return "", fmt.Errorf("error sending receipt %s: %w", receiptPath, err)
 	}
 
-	zipHash, err := HashFileContent(zipFile)
+	zipFileReader := bytes.NewReader(zipFile.Bytes())
+
+	zipHash, err := HashFileContent(zipFileReader)
 	if err != nil {
 		return "", fmt.Errorf("error sendig receipt %s: %w", receiptPath, err)
 	}
 
-	zipBase64, err := EncodeFileBase64(zipFile)
+	zipFileReader.Seek(0, io.SeekStart)
+
+	zipBase64, err := EncodeFileBase64(zipFileReader)
 	if err != nil {
 		return "", fmt.Errorf("error sending receipt %s: %w", receiptPath, err)
 	}
@@ -42,6 +46,7 @@ func ZipAndSendReceipt(baseURL, authToken, receiptPath string, receiptFile io.Re
 		AuthorizationToken: authToken,
 	}
 
+	log.Println("Sending receipt...")
 	res, err := SendReceipt(baseURL, params)
 	if err != nil {
 		return "", err
@@ -80,6 +85,8 @@ func SendReceipt(baseURL string, params SendReceiptParams) (SendReceiptResponse,
 		return SendReceiptResponse{}, fmt.Errorf("error building send receipt payload: %w", err)
 	}
 
+	log.Printf("Body to send: %s\n", string(payload))
+
 	reqURL := fmt.Sprintf("%s/v1/contribuyente/gem/comprobantes/%s", baseURL, fileWithoutExt)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewBuffer(payload))
@@ -88,8 +95,9 @@ func SendReceipt(baseURL string, params SendReceiptParams) (SendReceiptResponse,
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", params.AuthorizationToken))
+	req.Header.Add("Content-Type", "application/json")
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return SendReceiptResponse{}, fmt.Errorf("error sending receipt %s: %w", params.ReceiptFilePath, err)
 	}
@@ -130,7 +138,10 @@ func HashFileContent(file io.Reader) (string, error) {
 		return "", fmt.Errorf("error generating hash for zip file: %w", err)
 	}
 
-	return string(h.Sum(nil)), nil
+	checkSum := h.Sum(nil)
+
+	return hex.EncodeToString(checkSum), nil
+
 }
 
 // Creates an in memory zipFile with one content (the file in the argument)
