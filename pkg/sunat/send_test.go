@@ -14,7 +14,8 @@ func TestCreateSingleFileZip(t *testing.T) {
 
 	fileReader := strings.NewReader(fileContents)
 	t.Log("Creating zip")
-	zFile, err := createSingleFileZip(filePath, fileReader)
+	s := Sunat{}
+	zFile, err := s.createSingleFileZip(filePath, fileReader)
 	if err != nil {
 		t.Fatal(err)
 	}

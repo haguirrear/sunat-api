@@ -18,6 +18,7 @@ El archivo XML debe tener el nombre de acuerdo al formato establecido por SUNAT
 	`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		s := sunat.Sunat{Logger: root.GetLogger()}
 		receipPath := args[0]
 		rFile, err := os.Open(receipPath)
 		defer rFile.Close()
@@ -27,7 +28,7 @@ El archivo XML debe tener el nombre de acuerdo al formato establecido por SUNAT
 			os.Exit(1)
 		}
 
-		token, err := sunat.GetToken(root.ConfigData.AuthBaseURL, sunat.AuthParams{
+		token, err := s.GetToken(root.ConfigData.AuthBaseURL, sunat.AuthParams{
 			ClientID:     root.ConfigData.ClientID,
 			ClientSecret: root.ConfigData.ClientSecret,
 			Password:     root.ConfigData.Password,
@@ -38,7 +39,7 @@ El archivo XML debe tener el nombre de acuerdo al formato establecido por SUNAT
 			os.Exit(1)
 		}
 
-		ticket, err := sunat.ZipAndSendReceipt(root.ConfigData.BaseURL, token, receipPath, rFile)
+		ticket, err := s.ZipAndSendReceipt(root.ConfigData.BaseURL, token, receipPath, rFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)

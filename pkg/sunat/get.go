@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,17 +43,11 @@ func (r GetReceiptResponse) IsSuccess() bool {
 func (r GetReceiptResponse) IsProcessing() bool {
 	return r.ResponseCode == TIcketProcessingResponseCode
 }
-func (r GetReceiptResponse) IsCdrGenerated() bool {
-	b, err := strconv.ParseBool(r.CdrGenerated)
-	if err != nil {
-		log.Printf("error parsing indCdrGenerado from response ('%s') into a boolean: %w", r.CdrGenerated, err)
-		return false
-	}
-
-	return b
+func (r GetReceiptResponse) IsCdrGenerated() (bool, error) {
+	return strconv.ParseBool(r.CdrGenerated)
 }
 
-func GetReceipt(baseURL string, token string, ticket string) (GetReceiptResponse, error) {
+func (s Sunat) GetReceipt(baseURL string, token string, ticket string) (GetReceiptResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
@@ -67,7 +60,8 @@ func GetReceipt(baseURL string, token string, ticket string) (GetReceiptResponse
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 
-	res, err := client.Do(req)
+	// res, err := client.Do(req)
+	res, err := s.doRequest(client, req)
 	if err != nil {
 		return GetReceiptResponse{}, fmt.Errorf("error getting receipt %s: %w", ticket, err)
 	}
@@ -118,6 +112,10 @@ func SaveReceipt(receiptB64 string, outputFolder string) error {
 	content, err := io.ReadAll(contentReader)
 	if err != nil {
 		return fmt.Errorf("error reading receipt content: %w", err)
+	}
+
+	if err := os.MkdirAll(outputFolder, 0755); err != nil {
+		return fmt.Errorf("error ensuring output folder exists: %w", err)
 	}
 
 	destFilePath := filepath.Join(outputFolder, zipReader.File[0].Name)

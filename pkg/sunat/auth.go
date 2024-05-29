@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -25,7 +24,7 @@ type AuthResponseBody struct {
 
 const defaultTimeout = 10 * time.Second
 
-func GetToken(baseURL string, params AuthParams) (token string, err error) {
+func (s Sunat) GetToken(baseURL string, params AuthParams) (token string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
@@ -39,7 +38,6 @@ func GetToken(baseURL string, params AuthParams) (token string, err error) {
 	form.Set("password", params.Password)
 
 	encoded := strings.NewReader(form.Encode())
-	log.Printf("Body: %s\n", form.Encode())
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, authURL, encoded)
 	if err != nil {
 		return "", fmt.Errorf("error building auth request: %w", err)
@@ -47,7 +45,8 @@ func GetToken(baseURL string, params AuthParams) (token string, err error) {
 
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	res, err := client.Do(request)
+	// res, err := client.Do(request)
+	res, err := s.doRequest(client, request)
 	if err != nil {
 		return "", fmt.Errorf("error in auth response: %w", err)
 	}

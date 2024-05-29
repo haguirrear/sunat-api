@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -19,8 +18,8 @@ import (
 
 var ErrorFileNotFound = errors.New("File not found")
 
-func ZipAndSendReceipt(baseURL, authToken, receiptPath string, receiptFile io.Reader) (numTicket string, err error) {
-	zipFile, err := createSingleFileZip(receiptPath, receiptFile)
+func (s Sunat) ZipAndSendReceipt(baseURL, authToken, receiptPath string, receiptFile io.Reader) (numTicket string, err error) {
+	zipFile, err := s.createSingleFileZip(receiptPath, receiptFile)
 	if err != nil {
 		return "", fmt.Errorf("error sending receipt %s: %w", receiptPath, err)
 	}
@@ -46,8 +45,8 @@ func ZipAndSendReceipt(baseURL, authToken, receiptPath string, receiptFile io.Re
 		AuthorizationToken: authToken,
 	}
 
-	log.Println("Sending receipt...")
-	res, err := SendReceipt(baseURL, params)
+	s.Logger.Debug("Sending receipt...")
+	res, err := s.SendReceipt(baseURL, params)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +65,7 @@ type SendReceiptResponse struct {
 	NumTicket string `json:"numTicket"`
 }
 
-func SendReceipt(baseURL string, params SendReceiptParams) (SendReceiptResponse, error) {
+func (s Sunat) SendReceipt(baseURL string, params SendReceiptParams) (SendReceiptResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
@@ -85,8 +84,6 @@ func SendReceipt(baseURL string, params SendReceiptParams) (SendReceiptResponse,
 		return SendReceiptResponse{}, fmt.Errorf("error building send receipt payload: %w", err)
 	}
 
-	log.Printf("Body to send: %s\n", string(payload))
-
 	reqURL := fmt.Sprintf("%s/v1/contribuyente/gem/comprobantes/%s", baseURL, fileWithoutExt)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewBuffer(payload))
@@ -97,7 +94,8 @@ func SendReceipt(baseURL string, params SendReceiptParams) (SendReceiptResponse,
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", params.AuthorizationToken))
 	req.Header.Add("Content-Type", "application/json")
 
-	res, err := client.Do(req)
+	// res, err := client.Do(req)
+	res, err := s.doRequest(client, req)
 	if err != nil {
 		return SendReceiptResponse{}, fmt.Errorf("error sending receipt %s: %w", params.ReceiptFilePath, err)
 	}
@@ -146,14 +144,14 @@ func HashFileContent(file io.Reader) (string, error) {
 
 // Creates an in memory zipFile with one content (the file in the argument)
 // The caller is responsible to close the file after using it
-func createSingleFileZip(fileToCompressPath string, file io.Reader) (zipFile *bytes.Buffer, err error) {
+func (s Sunat) createSingleFileZip(fileToCompressPath string, file io.Reader) (zipFile *bytes.Buffer, err error) {
 	if file == nil {
 		return nil, fmt.Errorf("nil file passed to createSingleFileZip")
 	}
 
 	buf := new(bytes.Buffer)
 
-	log.Println("creating zip")
+	s.Logger.Info("creating zip")
 	zipWriter := zip.NewWriter(buf)
 	defer func() {
 		errzip := zipWriter.Close()
@@ -162,13 +160,13 @@ func createSingleFileZip(fileToCompressPath string, file io.Reader) (zipFile *by
 		}
 	}()
 
-	log.Println("creating first file inside zip")
+	s.Logger.Info("creating first file inside zip")
 	zw, err := zipWriter.Create(filepath.Base(fileToCompressPath))
 	if err != nil {
 		return nil, fmt.Errorf("error adding %s to zip file: %w", fileToCompressPath, err)
 	}
 
-	log.Println("adding file to zip archive")
+	s.Logger.Info("adding file to zip archive")
 	if _, err := io.Copy(zw, file); err != nil {
 		return nil, fmt.Errorf("error adding %s to zip file: %w", fileToCompressPath, err)
 	}

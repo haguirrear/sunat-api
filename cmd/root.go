@@ -30,6 +30,7 @@ import (
 )
 
 var cfgFile string
+var verboseCount int
 
 var ConfigData Config
 
@@ -77,6 +78,7 @@ func init() {
 	RootCmd.PersistentFlags().String("client-secret", "", "Client Secret para el uso de la API de SUNAT")
 	RootCmd.PersistentFlags().String("auth-url", "https://api-seguridad.sunat.gob.pe", "URL base para el endpoint de obtener Token")
 	RootCmd.PersistentFlags().String("base-url", "https://api-cpe.sunat.gob.pe", "URL base para las apis de SUNAT")
+	RootCmd.PersistentFlags().CountVarP(&verboseCount, "verbose", "v", "show verbose logs")
 
 	viper.BindPFlag("user", RootCmd.PersistentFlags().Lookup("user"))
 	viper.BindPFlag("password", RootCmd.PersistentFlags().Lookup("password"))
