@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "embed"
+
 	"github.com/haguirrear/sunatapi/cmd"
 	_ "github.com/haguirrear/sunatapi/cmd/comprobante"
 	_ "github.com/haguirrear/sunatapi/cmd/comprobante/consultar"
@@ -8,6 +10,9 @@ import (
 	_ "github.com/haguirrear/sunatapi/cmd/comprobante/procesar"
 )
 
+//go:embed version
+var version string
+
 func main() {
-	cmd.Execute()
+	cmd.Execute(version)
 }

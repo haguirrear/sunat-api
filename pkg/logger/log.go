@@ -39,7 +39,7 @@ func (l *Logger) Errorf(format string, v ...any) {
 		return
 	}
 
-	l.doPrintf(format, v...)
+	l.doPrintf(ErrorLevel, format, v...)
 }
 
 func (l *Logger) Warnf(format string, v ...any) {
@@ -47,7 +47,7 @@ func (l *Logger) Warnf(format string, v ...any) {
 		return
 	}
 
-	l.doPrintf(format, v...)
+	l.doPrintf(WarnLevel, format, v...)
 }
 
 func (l *Logger) Infof(format string, v ...any) {
@@ -55,7 +55,7 @@ func (l *Logger) Infof(format string, v ...any) {
 		return
 	}
 
-	l.doPrintf(format, v...)
+	l.doPrintf(InfoLevel, format, v...)
 }
 
 func (l *Logger) Debugf(format string, v ...any) {
@@ -63,7 +63,7 @@ func (l *Logger) Debugf(format string, v ...any) {
 		return
 	}
 
-	l.doPrintf(format, v...)
+	l.doPrintf(DebugLevel, format, v...)
 }
 
 func (l *Logger) Tracef(format string, v ...any) {
@@ -71,7 +71,7 @@ func (l *Logger) Tracef(format string, v ...any) {
 		return
 	}
 
-	l.doPrintf(format, v...)
+	l.doPrintf(TraceLevel, format, v...)
 }
 
 func (l *Logger) Error(str string) {
@@ -79,7 +79,7 @@ func (l *Logger) Error(str string) {
 		return
 	}
 
-	l.doPrint(str)
+	l.doPrint(ErrorLevel, str)
 }
 
 func (l *Logger) Warn(str string) {
@@ -87,7 +87,7 @@ func (l *Logger) Warn(str string) {
 		return
 	}
 
-	l.doPrint(str)
+	l.doPrint(WarnLevel, str)
 }
 
 func (l *Logger) Info(str string) {
@@ -95,7 +95,7 @@ func (l *Logger) Info(str string) {
 		return
 	}
 
-	l.doPrint(str)
+	l.doPrint(InfoLevel, str)
 }
 
 func (l *Logger) Debug(str string) {
@@ -103,7 +103,7 @@ func (l *Logger) Debug(str string) {
 		return
 	}
 
-	l.doPrint(str)
+	l.doPrint(DebugLevel, str)
 }
 
 func (l *Logger) Trace(str string) {
@@ -111,7 +111,7 @@ func (l *Logger) Trace(str string) {
 		return
 	}
 
-	l.doPrint(str)
+	l.doPrint(TraceLevel, str)
 }
 
 func (l *Logger) getWriter() io.Writer {
@@ -122,9 +122,9 @@ func (l *Logger) getWriter() io.Writer {
 	return l.writer
 }
 
-func (l *Logger) getPrefix() string {
+func (l *Logger) getPrefix(level LogLevel) string {
 	var prefix string
-	switch l.Level {
+	switch level {
 	case TraceLevel:
 		prefix = "[TRACE] "
 	case DebugLevel:
@@ -140,18 +140,18 @@ func (l *Logger) getPrefix() string {
 	return prefix
 }
 
-func (l *Logger) doPrintf(format string, v ...any) {
+func (l *Logger) doPrintf(level LogLevel, format string, v ...any) {
 	w := l.getWriter()
 
-	w.Write([]byte(l.getPrefix()))
+	w.Write([]byte(l.getPrefix(level)))
 	w.Write([]byte(fmt.Sprintf(format, v...)))
 	w.Write([]byte("\n"))
 }
 
-func (l *Logger) doPrint(str string) {
+func (l *Logger) doPrint(level LogLevel, str string) {
 	w := l.getWriter()
 
-	w.Write([]byte(l.getPrefix()))
+	w.Write([]byte(l.getPrefix(level)))
 	w.Write([]byte(str))
 	w.Write([]byte("\n"))
 }

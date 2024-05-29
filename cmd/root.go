@@ -29,6 +29,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var ver string
+var versionFlag bool
 var cfgFile string
 var verboseCount int
 
@@ -50,14 +52,19 @@ var RootCmd = &cobra.Command{
 	Long:  `sunatapi es una app de terminal que interactua con la API REST de SUNAT.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("root called")
-	// },
+	Run: func(cmd *cobra.Command, args []string) {
+		if versionFlag {
+			fmt.Printf("sunat %s\n", string(ver))
+		} else {
+			cmd.Usage()
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(version string) {
+	ver = version
 	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
@@ -78,7 +85,9 @@ func init() {
 	RootCmd.PersistentFlags().String("client-secret", "", "Client Secret para el uso de la API de SUNAT")
 	RootCmd.PersistentFlags().String("auth-url", "https://api-seguridad.sunat.gob.pe", "URL base para el endpoint de obtener Token")
 	RootCmd.PersistentFlags().String("base-url", "https://api-cpe.sunat.gob.pe", "URL base para las apis de SUNAT")
-	RootCmd.PersistentFlags().CountVarP(&verboseCount, "verbose", "v", "show verbose logs")
+	RootCmd.PersistentFlags().CountVarP(&verboseCount, "verbose", "v", "Mostrar logs")
+
+	RootCmd.Flags().BoolVar(&versionFlag, "version", false, "Mostrar la versión actual")
 
 	viper.BindPFlag("user", RootCmd.PersistentFlags().Lookup("user"))
 	viper.BindPFlag("password", RootCmd.PersistentFlags().Lookup("password"))
@@ -112,7 +121,8 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		log := GetLogger()
+		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
 	parseAndValidateConfig()
