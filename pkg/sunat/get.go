@@ -6,12 +6,14 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 const (
@@ -47,8 +49,8 @@ func (r GetReceiptResponse) IsCdrGenerated() (bool, error) {
 	return strconv.ParseBool(r.CdrGenerated)
 }
 
-func (s Sunat) GetReceipt(baseURL string, token string, ticket string) (GetReceiptResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+func (s Sunat) GetReceipt(ctx context.Context, baseURL string, token string, ticket string) (GetReceiptResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
 	reqURL := fmt.Sprintf("%s/v1/contribuyente/gem/comprobantes/envios/%s", baseURL, ticket)
@@ -132,4 +134,26 @@ func SaveReceipt(receiptB64 string, outputFolder string) error {
 	}
 
 	return nil
+}
+
+func (s Sunat) PollReceipt(ctx context.Context, baseURL, token, ticket string) (GetReceiptResponse, error) {
+	for {
+		s.Logger.Debug("Trying to get Receipt")
+		r, err := s.GetReceipt(ctx, baseURL, token, ticket)
+		if err != nil {
+			s.Logger.Errorf("Error: %v", err)
+		}
+
+		if !r.IsProcessing() {
+			return r, err
+		}
+
+		select {
+		case <-ctx.Done():
+			return r, errors.New("Timeout")
+		default:
+			time.Sleep(200 * time.Millisecond)
+		}
+
+	}
 }

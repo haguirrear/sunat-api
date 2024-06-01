@@ -1,6 +1,8 @@
 package procesar
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,7 +17,10 @@ import (
 
 var errorFolder string
 var outputFolder string
-var retries int
+
+const (
+	pollTimeout = 10 * time.Second
+)
 
 var ProcesarCmd = &cobra.Command{
 	Use:   "procesar [recibo xml para enviar a SUNAT]",
@@ -55,23 +60,15 @@ En caso de éxito guarda el comprobante procesado, en caso de error guarda un ar
 		fmt.Println("Recibo enviado correctamente!")
 		fmt.Printf("Se generó el ticket: %s\n", ticket)
 
-		var receipt sunat.GetReceiptResponse
+		fmt.Printf("El comprobante esta siendo procesado por sunat...\n")
 
-		for i := 0; i < retries; i++ {
-			receipt, err = s.GetReceipt(root.ConfigData.BaseURL, token, ticket)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				os.Exit(1)
-			}
+		ctx, cancel := context.WithTimeout(context.Background(), pollTimeout)
+		defer cancel()
 
-			if receipt.IsProcessing() {
-				fmt.Printf("El comprobante esta siendo procesado por sunat...\n")
-				time.Sleep(200 * time.Millisecond)
-				continue
-			} else {
-				fmt.Printf("El comprobante obtuvo codigo: %s\n", receipt.ResponseCode)
-				break
-			}
+		receipt, err := s.PollReceipt(ctx, root.ConfigData.BaseURL, token, ticket)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 
 		if receipt.IsError() {
@@ -94,6 +91,15 @@ En caso de éxito guarda el comprobante procesado, en caso de error guarda un ar
 
 		if receipt.ReceiptCertificate == "" {
 			fmt.Fprintln(os.Stderr, "Se recibió un comprobante vacío")
+
+			r, err := json.MarshalIndent(receipt, "", "  ")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot show response: %v\n", err)
+				os.Exit(1)
+			}
+
+			fmt.Fprintf(os.Stderr, "Respuesta de Sunat:\n%s\n", string(r))
+
 			os.Exit(1)
 		}
 
@@ -108,5 +114,4 @@ func init() {
 	comprobante.ComprobanteCmd.AddCommand(ProcesarCmd)
 	ProcesarCmd.Flags().StringVarP(&outputFolder, "output-folder", "o", ".", "Carpeta donde guardar el ticket de SUNAT. Si no es proporcionada se guardará en la carpeta actual")
 	ProcesarCmd.Flags().StringVarP(&errorFolder, "error-folder", "e", ".", "Carpeta donde guardar el mensaje de error si es que sucede un error")
-	ProcesarCmd.Flags().IntVar(&retries, "retries", 3, "Numero de reintentos si el ticket aun sigue procesandose")
 }

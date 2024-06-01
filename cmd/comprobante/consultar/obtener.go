@@ -1,6 +1,7 @@
 package consultar
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,7 +36,7 @@ Descarga la guia enviada y en caso de error genera un archivo {numGuia_error.txt
 			os.Exit(1)
 		}
 
-		receipt, err := s.GetReceipt(root.ConfigData.BaseURL, token, ticket)
+		receipt, err := s.GetReceipt(context.Background(), root.ConfigData.BaseURL, token, ticket)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
