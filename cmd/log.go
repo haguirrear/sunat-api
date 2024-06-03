@@ -9,9 +9,9 @@ import (
 func GetLogger() *logger.Logger {
 	var level logger.LogLevel
 
-	switch verboseCount {
+	switch VerboseCount {
 	case 0:
-		level = logger.ErrorLevel
+		level = logger.WarnLevel
 	case 1:
 		level = logger.DebugLevel
 	default:

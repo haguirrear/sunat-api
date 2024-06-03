@@ -32,7 +32,7 @@ import (
 var ver string
 var versionFlag bool
 var cfgFile string
-var verboseCount int
+var VerboseCount int
 
 var ConfigData Config
 
@@ -85,7 +85,7 @@ func init() {
 	RootCmd.PersistentFlags().String("client-secret", "", "Client Secret para el uso de la API de SUNAT")
 	RootCmd.PersistentFlags().String("auth-url", "https://api-seguridad.sunat.gob.pe", "URL base para el endpoint de obtener Token")
 	RootCmd.PersistentFlags().String("base-url", "https://api-cpe.sunat.gob.pe", "URL base para las apis de SUNAT")
-	RootCmd.PersistentFlags().CountVarP(&verboseCount, "verbose", "v", "Mostrar logs")
+	RootCmd.PersistentFlags().CountVarP(&VerboseCount, "verbose", "v", "Mostrar logs")
 
 	RootCmd.Flags().BoolVar(&versionFlag, "version", false, "Mostrar la versión actual")
 
